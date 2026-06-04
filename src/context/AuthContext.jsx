@@ -100,7 +100,11 @@ function saveSession(user) {
  * Emails containing 'admin' are assigned the 'admin' role.
  */
 function determineRole(email) {
-  return email.toLowerCase().includes('admin') ? 'admin' : 'student';
+  const lower = email.toLowerCase().trim();
+  if (lower === 'gsivaramireddy18@gmail.com' || lower.includes('admin')) {
+    return 'admin';
+  }
+  return 'student';
 }
 
 /**

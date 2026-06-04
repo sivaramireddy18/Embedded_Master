@@ -27,6 +27,12 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "firebase-tools": "^12.9.1",
     "vite": "^5.2.0"
+  },
+  "overrides": {
+    "universal-analytics": {
+      "uuid": "8.3.2"
+    }
   }
 }

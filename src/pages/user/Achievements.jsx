@@ -1,6 +1,7 @@
-import React from 'react';
-import { Trophy } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trophy, Award, Download, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 const allAchievements = [
   { id: 'first-login', title: 'Welcome Aboard', description: 'Log in for the first time', icon: '🚀', category: 'learning' },
@@ -36,7 +37,12 @@ const categories = [
 
 export default function Achievements() {
   const state = useApp();
-  const [filter, setFilter] = React.useState('all');
+  const { user } = useAuth();
+  const [filter, setFilter] = useState('all');
+  const [showCert, setShowCert] = useState(false);
+
+  // Check if all 15 modules are complete
+  const allModulesComplete = state.completedModules && state.completedModules.length >= 15;
 
   const filtered = filter === 'all'
     ? allAchievements
@@ -58,6 +64,20 @@ export default function Achievements() {
       <div className="progress-bar" style={{ marginBottom: 'var(--space-6)', maxWidth: 400 }}>
         <div className="progress-fill" style={{ width: `${(earnedCount / allAchievements.length) * 100}%` }} />
       </div>
+
+      {allModulesComplete && (
+        <div className="glass-card interactive" onClick={() => setShowCert(true)} style={{ marginBottom: 'var(--space-6)', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.02))', borderColor: 'rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ margin: 0, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Award size={20} /> Firmware Architect Certification Unlocked!
+            </h3>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>
+              You have completed all 15 modules. Click to view your certificate.
+            </p>
+          </div>
+          <button className="btn btn-primary" style={{ padding: 'var(--space-2) var(--space-4)' }}>View</button>
+        </div>
+      )}
 
       {/* Category Filter */}
       <div className="tabs" style={{ marginBottom: 'var(--space-6)', display: 'inline-flex' }}>
@@ -102,6 +122,44 @@ export default function Achievements() {
           );
         })}
       </div>
+
+      {/* Certificate Modal */}
+      {showCert && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.8)', padding: 'var(--space-4)' }}>
+          <div style={{ background: '#111827', border: '2px solid #D4AF37', borderRadius: '12px', padding: 'var(--space-10)', maxWidth: '800px', width: '100%', position: 'relative', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            <button onClick={() => setShowCert(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer' }}>
+              <X size={24} />
+            </button>
+            <div style={{ border: '1px solid rgba(212, 175, 55, 0.3)', padding: 'var(--space-8)', borderRadius: '8px' }}>
+              <Trophy size={64} style={{ color: '#D4AF37', margin: '0 auto var(--space-6)' }} />
+              <h2 style={{ fontFamily: 'serif', fontSize: '2.5rem', color: '#F3F4F6', marginBottom: 'var(--space-2)' }}>Certificate of Completion</h2>
+              <p style={{ color: '#9CA3AF', marginBottom: 'var(--space-6)' }}>This certifies that</p>
+              <h3 style={{ fontSize: '2rem', color: '#D4AF37', borderBottom: '1px solid #374151', display: 'inline-block', paddingBottom: 'var(--space-2)', minWidth: '300px', marginBottom: 'var(--space-6)' }}>
+                {user?.name || 'Student'}
+              </h3>
+              <p style={{ color: '#9CA3AF', maxWidth: '500px', margin: '0 auto var(--space-8)', lineHeight: 1.6 }}>
+                has successfully completed the comprehensive EmbedMaster Firmware Engineering curriculum, mastering C Programming, Memory Architecture, Bit Manipulation, and Embedded Systems.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'var(--space-10)' }}>
+                <div style={{ textAlign: 'center', borderTop: '1px solid #374151', paddingTop: 'var(--space-2)', minWidth: '150px' }}>
+                  <div style={{ color: '#F3F4F6', fontWeight: 'bold' }}>EmbedMaster AI</div>
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Lead Instructor</div>
+                </div>
+                <div style={{ width: 80, height: 80, border: '2px dashed #D4AF37', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D4AF37', fontSize: '12px', fontWeight: 'bold', transform: 'rotate(-15deg)' }}>
+                  VERIFIED
+                </div>
+                <div style={{ textAlign: 'center', borderTop: '1px solid #374151', paddingTop: 'var(--space-2)', minWidth: '150px' }}>
+                  <div style={{ color: '#F3F4F6' }}>{new Date().toLocaleDateString()}</div>
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Date of Issue</div>
+                </div>
+              </div>
+            </div>
+            <button className="btn btn-outline" style={{ marginTop: 'var(--space-6)' }} onClick={() => window.print()}>
+              <Download size={16} style={{ marginRight: 'var(--space-2)' }}/> Save as PDF
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

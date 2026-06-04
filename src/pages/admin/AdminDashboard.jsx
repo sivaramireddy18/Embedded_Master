@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, TrendingUp, Award, Clock, Search, ChevronRight,
-  BarChart3, Flame, Star, BookOpen, Eye
+  BarChart3, Flame, Star, BookOpen, Eye, Database
 } from 'lucide-react';
 
 const STORAGE_KEY = 'embedmaster-users';
@@ -11,6 +11,36 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
+
+  const generateMockData = () => {
+    if (!window.confirm("This will overwrite existing local storage users and progress with 50 fake users. Continue?")) return;
+    
+    const fakeUsers = [];
+    for (let i = 1; i <= 50; i++) {
+      const id = `mock-user-${i}`;
+      fakeUsers.push({ id, name: `Student ${i}`, email: `student${i}@example.com`, role: 'user' });
+      
+      const xp = Math.floor(Math.random() * 10000);
+      const fakeProgress = {
+        xp,
+        level: Math.floor(xp / 1000),
+        streak: { current: Math.floor(Math.random() * 30), lastDate: new Date().toISOString().split('T')[0] },
+        completedLessons: Array(Math.floor(Math.random() * 20)).fill('lesson'),
+        completedModules: [],
+        quizScores: { 'module-01': 80 + Math.floor(Math.random() * 20) },
+        achievements: Array(Math.floor(Math.random() * 5)).fill('badge'),
+        bookmarks: [],
+        currentModule: 'module-01'
+      };
+      localStorage.setItem(`embedmaster-progress-${id}`, JSON.stringify(fakeProgress));
+    }
+    
+    // Preserve existing admin
+    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(u => u.role === 'admin');
+    const finalUsers = [...existing, ...fakeUsers];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(finalUsers));
+    setUsers(finalUsers);
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -146,12 +176,18 @@ export default function AdminDashboard() {
   // Main admin view
   return (
     <div className="slide-up">
-      <div className="page-header">
-        <h1>
-          <BarChart3 size={28} style={{ verticalAlign: 'middle', marginRight: 'var(--space-2)' }} />
-          Admin Dashboard
-        </h1>
-        <p>Monitor learner progress and platform analytics</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>
+            <BarChart3 size={28} style={{ verticalAlign: 'middle', marginRight: 'var(--space-2)' }} />
+            Admin Dashboard
+          </h1>
+          <p>Monitor learner progress and platform analytics</p>
+        </div>
+        <button className="btn btn-outline" onClick={generateMockData}>
+          <Database size={16} style={{ marginRight: 'var(--space-2)' }} />
+          Generate Mock Data
+        </button>
       </div>
 
       {/* Overview Stats */}

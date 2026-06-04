@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Zap, Flame, Trophy, BookOpen, Target, Code2,
-  ChevronRight, Star, TrendingUp, Clock, Award
+  ChevronRight, Star, TrendingUp, Clock, Award,
+  Download, Upload
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -35,7 +36,49 @@ const levelNames = [
 const levelThresholds = [0, 100, 500, 1500, 4000, 8000, 15000];
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+
+  const handleExportData = () => {
+    try {
+      const data = {
+        appState: state,
+        timestamp: new Date().toISOString(),
+        version: '1.0'
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `embedmaster-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert("Failed to export data");
+    }
+  };
+
+  const handleImportData = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (data.appState) {
+          localStorage.setItem(`embedmaster-progress-${user.id}`, JSON.stringify(data.appState));
+          alert("Progress imported successfully! The page will now reload.");
+          window.location.reload();
+        } else {
+          alert("Invalid backup file format.");
+        }
+      } catch (error) {
+        alert("Failed to read backup file.");
+      }
+    };
+    reader.readAsText(file);
+  };
   const state = useApp();
 
   const levelIndex = useMemo(() => {
@@ -271,6 +314,26 @@ export default function Dashboard() {
             </h3>
             <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-4)' }}>
               <ProgressRing value={overallProgress} size={120} label="Ready" />
+            </div>
+          </div>
+
+          {/* Data Management (Serverless Sync) */}
+          <div className="glass-card no-hover">
+            <h3 className="section-title" style={{ fontSize: 'var(--text-base)' }}>
+              <Download size={18} />
+              Data Management
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-4)' }}>
+              Sync your progress manually across devices without a backend.
+            </p>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <button onClick={handleExportData} className="btn btn-outline" style={{ flex: 1, padding: 'var(--space-2)', fontSize: 'var(--text-sm)' }}>
+                <Download size={14} style={{ marginRight: 'var(--space-2)' }}/> Backup
+              </button>
+              <label className="btn btn-outline" style={{ flex: 1, padding: 'var(--space-2)', fontSize: 'var(--text-sm)', cursor: 'pointer', textAlign: 'center' }}>
+                <Upload size={14} style={{ marginRight: 'var(--space-2)' }}/> Restore
+                <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportData} />
+              </label>
             </div>
           </div>
         </div>

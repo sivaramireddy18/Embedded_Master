@@ -9,6 +9,8 @@ import FlowchartViewer from '../../components/simulators/FlowchartViewer';
 import CallStackViewer from '../../components/simulators/CallStackViewer';
 import ArrayVisualizer from '../../components/simulators/ArrayVisualizer';
 import PointerTracer from '../../components/simulators/PointerTracer';
+import StructMemoryViewer from '../../components/simulators/StructMemoryViewer';
+import HeapVisualizer from '../../components/simulators/HeapVisualizer';
 
 const moduleMap = {
   'module-01': () => import('../../data/modules/module01-computer-fundamentals.js'),
@@ -21,6 +23,11 @@ const moduleMap = {
   'module-08': () => import('../../data/modules/module08-arrays.js'),
   'module-09': () => import('../../data/modules/module09-strings.js'),
   'module-10': () => import('../../data/modules/module10-pointers.js'),
+  'module-11': () => import('../../data/modules/module11-structs-unions.js'),
+  'module-12': () => import('../../data/modules/module12-bit-manipulation-advanced.js'),
+  'module-13': () => import('../../data/modules/module13-dynamic-memory.js'),
+  'module-14': () => import('../../data/modules/module14-preprocessor.js'),
+  'module-15': () => import('../../data/modules/module15-embedded-specifics.js'),
 };
 
 const simulatorMap = {
@@ -31,6 +38,8 @@ const simulatorMap = {
   CallStackViewer,
   ArrayVisualizer,
   PointerTracer,
+  StructMemoryViewer,
+  HeapVisualizer,
 };
 
 function renderMarkdown(text) {

@@ -20,6 +20,11 @@ const modules = [
   { id: 'module-08', title: 'Arrays & Contiguous Memory', icon: '📚', lessons: 3 },
   { id: 'module-09', title: 'Strings & Character Arrays', icon: '🔤', lessons: 3 },
   { id: 'module-10', title: 'Pointers & Memory Addresses', icon: '👉', lessons: 4 },
+  { id: 'module-11', title: 'Structs & Unions', icon: '🧱', lessons: 5 },
+  { id: 'module-12', title: 'Advanced Bit Manipulation', icon: '⚡', lessons: 4 },
+  { id: 'module-13', title: 'Dynamic Memory', icon: '🧠', lessons: 4 },
+  { id: 'module-14', title: 'The Preprocessor', icon: '🏗️', lessons: 4 },
+  { id: 'module-15', title: 'Embedded Specifics', icon: '💻', lessons: 5 },
 ];
 
 const levelNames = [

@@ -15,6 +15,11 @@ const moduleMap = {
   'module-08': () => import('../../data/modules/module08-arrays.js'),
   'module-09': () => import('../../data/modules/module09-strings.js'),
   'module-10': () => import('../../data/modules/module10-pointers.js'),
+  'module-11': () => import('../../data/modules/module11-structs-unions.js'),
+  'module-12': () => import('../../data/modules/module12-bit-manipulation-advanced.js'),
+  'module-13': () => import('../../data/modules/module13-dynamic-memory.js'),
+  'module-14': () => import('../../data/modules/module14-preprocessor.js'),
+  'module-15': () => import('../../data/modules/module15-embedded-specifics.js'),
 };
 
 export default function ModulePage() {

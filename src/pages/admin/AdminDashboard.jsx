@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, TrendingUp, Award, Clock, Search, ChevronRight,
-  BarChart3, Flame, Star, BookOpen, Eye, Database
+  BarChart3, Flame, Star, BookOpen, Eye, Database, Trash2
 } from 'lucide-react';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db, isFirebaseEnabled } from '../../config/firebase';
 
 const STORAGE_KEY = 'embedmaster-users';
@@ -99,6 +99,38 @@ export default function AdminDashboard() {
     fetchUsers();
   }, []);
 
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Are you sure you want to delete this user and all of their progress permanently?")) return;
+
+    if (isFirebaseEnabled) {
+      try {
+        await deleteDoc(doc(db, 'users', userId, 'progress', 'data'));
+        await deleteDoc(doc(db, 'users', userId));
+        
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        setSelectedUser(null);
+        alert("User deleted successfully.");
+      } catch (err) {
+        alert("Failed to delete user: " + err.message);
+      }
+    } else {
+      try {
+        localStorage.removeItem(`embedmaster-progress-${userId}`);
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const filtered = parsed.filter(u => u.id !== userId);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+          setUsers(filtered.map(u => ({ ...u, progress: getProgress(u.id) })));
+        }
+        setSelectedUser(null);
+        alert("User deleted successfully.");
+      } catch (e) {
+        alert("Failed to delete user locally.");
+      }
+    }
+  };
+
   const filteredUsers = users.filter(u =>
     u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -149,9 +181,17 @@ export default function AdminDashboard() {
     const level = getLevel(progress?.xp || 0);
     return (
       <div className="slide-up">
-        <button className="btn btn-ghost" onClick={() => setSelectedUser(null)} style={{ marginBottom: 'var(--space-4)' }}>
-          ← Back to Users
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+          <button className="btn btn-ghost" onClick={() => setSelectedUser(null)}>
+            ← Back to Users
+          </button>
+          {selectedUser.role !== 'admin' && (
+            <button className="btn btn-outline" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={() => handleDeleteUser(selectedUser.id)}>
+              <Trash2 size={14} style={{ marginRight: 'var(--space-2)' }} /> Delete Student
+            </button>
+          )}
+        </div>
+        
         <div className="glass-card no-hover" style={{
           marginBottom: 'var(--space-6)',
           background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.04))'
@@ -322,7 +362,7 @@ export default function AdminDashboard() {
                   <th>Streak</th>
                   <th>Lessons</th>
                   <th>Role</th>
-                  <th></th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -354,9 +394,16 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setSelectedUser(user)}>
-                          <Eye size={14} /> View
-                        </button>
+                        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setSelectedUser(user)}>
+                            <Eye size={14} style={{ marginRight: '4px' }} /> View
+                          </button>
+                          {user.role !== 'admin' && (
+                            <button className="btn btn-ghost btn-sm text-red" onClick={() => handleDeleteUser(user.id)} style={{ color: 'var(--accent-red)' }}>
+                              <Trash2 size={14} style={{ marginRight: '4px' }} /> Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

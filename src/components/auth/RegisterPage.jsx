@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterPage() {
-  const { register, isAuthenticated } = useAuth();
+  const { register, loginWithGoogle, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
@@ -17,6 +17,28 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState({});
   const [generalError, setGeneralError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const GoogleIcon = () => (
+    <svg style={{ width: '18px', height: '18px' }} viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.59c-.28 1.5-.12 3.01-.97 4.29l3.41 2.64c2-1.84 3.16-4.56 3.16-7.78z" />
+      <path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.41-2.64c-.95.64-2.17 1.01-3.55 1.01-2.73 0-5.04-1.84-5.87-4.31l-3.52 2.72C5.64 21.52 8.57 24 12 24z" />
+      <path fill="#FBBC05" d="M6.13 15.15A7.17 7.17 0 0 1 5.7 12c0-1.1.2-2.15.57-3.15L2.75 6.13A11.94 11.94 0 0 0 0 12c0 2.27.64 4.38 1.75 6.18l4.38-3.03z" />
+      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 8.57 0 5.64 2.48 4.63 5.82l3.52 2.72c.83-2.47 3.14-4.31 5.87-4.31z" />
+    </svg>
+  );
+
+  const handleGoogleSignIn = async () => {
+    setGeneralError('');
+    setIsLoading(true);
+    try {
+      await loginWithGoogle();
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setGeneralError(err.message || 'Google Sign-in failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -330,6 +352,19 @@ export default function RegisterPage() {
             )}
           </button>
         </form>
+
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={handleGoogleSignIn}
+          disabled={isLoading}
+          style={{ width: '100%', marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)', padding: 'var(--space-3)', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}
+        >
+          <GoogleIcon />
+          Continue with Google
+        </button>
+
+        <div className="auth-divider" style={{ margin: 'var(--space-4) 0' }}>or</div>
 
         {/* Footer link */}
         <div className="auth-footer">

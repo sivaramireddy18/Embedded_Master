@@ -4,7 +4,9 @@ import {
   createUserWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db, isFirebaseEnabled } from '../config/firebase';
@@ -204,6 +206,63 @@ export function AuthProvider({ children }) {
   }, []);
 
   /**
+   * Log in / Register with Google OAuth.
+   */
+  const loginWithGoogle = useCallback(async () => {
+    if (isFirebaseEnabled) {
+      try {
+        const provider = new GoogleAuthProvider();
+        const userCredential = await signInWithPopup(auth, provider);
+        const firebaseUser = userCredential.user;
+        
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        let userData;
+        if (!userDoc.exists()) {
+          const role = determineRole(firebaseUser.email || '');
+          userData = {
+            name: firebaseUser.displayName || 'Google Student',
+            email: firebaseUser.email || '',
+            role,
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(userDocRef, userData);
+        } else {
+          userData = userDoc.data();
+        }
+        
+        const sessionUser = { id: firebaseUser.uid, ...userData };
+        setUser(sessionUser);
+        return sessionUser;
+      } catch (err) {
+        throw new Error(err.message || 'Failed to sign in with Google.');
+      }
+    } else {
+      // Mock Google Login in localStorage
+      const mockGoogleUser = {
+        id: 'google_mock_user',
+        name: 'Mock Google Student',
+        email: 'googlestudent@example.com',
+        role: 'student'
+      };
+      
+      const users = getStoredUsers();
+      if (!users.some(u => u.email === mockGoogleUser.email)) {
+        users.push({
+          ...mockGoogleUser,
+          createdAt: new Date().toISOString()
+        });
+        saveUsers(users);
+      }
+      
+      setUser(mockGoogleUser);
+      saveSession(mockGoogleUser);
+      return mockGoogleUser;
+    }
+  }, []);
+
+  /**
    * Register a new user.
    * Throws an error with a user-friendly message on failure.
    */
@@ -298,6 +357,7 @@ export function AuthProvider({ children }) {
     user,
     loading,
     login,
+    loginWithGoogle,
     register,
     logout,
     isAuthenticated: !!user,

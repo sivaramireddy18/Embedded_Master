@@ -14,6 +14,10 @@ import Playground from './pages/user/Playground';
 import Assessments from './pages/user/Assessments';
 import Achievements from './pages/user/Achievements';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import DebuggingAcademy from './pages/user/DebuggingAcademy';
+import Projects from './pages/user/Projects';
+import InterviewPrep from './pages/user/InterviewPrep';
+import CareerRoadmap from './pages/user/CareerRoadmap';
 
 // Placeholder pages for routes that aren't fully built yet
 function ComingSoon({ title }) {
@@ -64,10 +68,10 @@ function AppRoutes() {
         <Route path="/playground" element={<Playground />} />
         <Route path="/assessments" element={<Assessments />} />
         <Route path="/achievements" element={<Achievements />} />
-        <Route path="/debugging" element={<ComingSoon title="Debugging Academy" />} />
-        <Route path="/projects" element={<ComingSoon title="Projects" />} />
-        <Route path="/interview-prep" element={<ComingSoon title="Interview Preparation" />} />
-        <Route path="/career-roadmap" element={<ComingSoon title="Career Roadmap" />} />
+        <Route path="/debugging" element={<DebuggingAcademy />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/interview-prep" element={<InterviewPrep />} />
+        <Route path="/career-roadmap" element={<CareerRoadmap />} />
         <Route path="/daily-plan" element={<ComingSoon title="Daily Learning Plan" />} />
 
         {/* Admin Routes */}

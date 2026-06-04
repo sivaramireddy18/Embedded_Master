@@ -18,6 +18,7 @@ import DebuggingAcademy from './pages/user/DebuggingAcademy';
 import Projects from './pages/user/Projects';
 import InterviewPrep from './pages/user/InterviewPrep';
 import CareerRoadmap from './pages/user/CareerRoadmap';
+import DailyPlan from './pages/user/DailyPlan';
 
 // Placeholder pages for routes that aren't fully built yet
 function ComingSoon({ title }) {
@@ -72,7 +73,7 @@ function AppRoutes() {
         <Route path="/projects" element={<Projects />} />
         <Route path="/interview-prep" element={<InterviewPrep />} />
         <Route path="/career-roadmap" element={<CareerRoadmap />} />
-        <Route path="/daily-plan" element={<ComingSoon title="Daily Learning Plan" />} />
+        <Route path="/daily-plan" element={<DailyPlan />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={

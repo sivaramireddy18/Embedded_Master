@@ -9,8 +9,9 @@ export default function Header() {
   const state = useApp();
   const { theme, toggleTheme } = useTheme();
 
-  const initials = user?.name
-    ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  const displayName = user?.displayName || user?.name || '';
+  const initials = displayName
+    ? displayName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : '??';
 
   return (
@@ -50,8 +51,17 @@ export default function Header() {
           <Bell size={18} />
         </button>
 
-        <div className="user-avatar" title={user?.name || 'User'} onClick={logout}>
-          {initials}
+        <div 
+          className="user-avatar" 
+          title={displayName || 'User'} 
+          onClick={logout}
+          style={{ overflow: 'hidden', padding: 0 }}
+        >
+          {user?.photoUrl ? (
+            <img src={user.photoUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            initials
+          )}
         </div>
       </div>
     </header>

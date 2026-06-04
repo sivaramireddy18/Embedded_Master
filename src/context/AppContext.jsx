@@ -6,10 +6,11 @@ import {
   useCallback,
   useMemo,
 } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db, isFirebaseEnabled } from '../config/firebase';
+import { useAuth } from './AuthContext';
 
 const AppContext = createContext(null);
-
-const STORAGE_KEY = 'embedmaster-progress';
 
 /** Level thresholds — sorted ascending by minXP. */
 const LEVEL_THRESHOLDS = [
@@ -64,34 +65,6 @@ function calculateLevel(xp) {
 }
 
 /**
- * Load persisted state from localStorage, merging with defaults
- * so newly added keys are always present.
- */
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULT_STATE, ...parsed };
-    }
-  } catch {
-    // Corrupt or unavailable — start fresh
-  }
-  return { ...DEFAULT_STATE };
-}
-
-/**
- * Persist state to localStorage.
- */
-function saveState(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    console.error('Failed to persist app state to localStorage');
-  }
-}
-
-/**
  * Check if today's date (YYYY-MM-DD) matches the given dateString.
  */
 function isToday(dateString) {
@@ -115,12 +88,80 @@ function todayString() {
 }
 
 export function AppProvider({ children }) {
-  const [state, setState] = useState(loadState);
+  const { user } = useAuth();
+  const STORAGE_KEY = `embedmaster-progress-${user?.id || 'default'}`;
 
-  // Persist to localStorage whenever state changes
+  const [state, setState] = useState(DEFAULT_STATE);
+  const [syncing, setSyncing] = useState(true);
+
+  // Load state on mount/user change
   useEffect(() => {
-    saveState(state);
-  }, [state]);
+    if (!user) return;
+    
+    setSyncing(true);
+    if (isFirebaseEnabled) {
+      const loadFirebaseProgress = async () => {
+        try {
+          const docRef = doc(db, 'users', user.id, 'progress', 'data');
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setState(docSnap.data());
+          } else {
+            // First time Firebase user, check if we have local storage data to import
+            const localRaw = localStorage.getItem(STORAGE_KEY);
+            let initialState = DEFAULT_STATE;
+            if (localRaw) {
+              try { initialState = JSON.parse(localRaw); } catch (e) {}
+            }
+            setState(initialState);
+            await setDoc(docRef, initialState);
+          }
+        } catch (e) {
+          console.error("Failed to load progress from Firestore:", e);
+          const localRaw = localStorage.getItem(STORAGE_KEY);
+          if (localRaw) {
+            try { setState(JSON.parse(localRaw)); } catch (err) {}
+          }
+        } finally {
+          setSyncing(false);
+        }
+      };
+      loadFirebaseProgress();
+    } else {
+      // Firebase disabled - load from localStorage
+      const localRaw = localStorage.getItem(STORAGE_KEY);
+      if (localRaw) {
+        try {
+          setState(JSON.parse(localRaw));
+        } catch (e) {}
+      } else {
+        setState(DEFAULT_STATE);
+      }
+      setSyncing(false);
+    }
+  }, [user, STORAGE_KEY]);
+
+  // Sync state to Firebase / LocalStorage when state changes
+  useEffect(() => {
+    if (syncing || !user) return;
+
+    if (isFirebaseEnabled) {
+      const syncToFirebase = async () => {
+        try {
+          const docRef = doc(db, 'users', user.id, 'progress', 'data');
+          await setDoc(docRef, state);
+        } catch (e) {
+          console.error("Failed to sync progress to Firestore:", e);
+        }
+      };
+      syncToFirebase();
+    }
+    
+    // Always persist to localStorage for local fast loading and offline resilience
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }, [state, user, STORAGE_KEY, syncing]);
 
   /**
    * Update the streak based on activity today.
@@ -275,7 +316,7 @@ export function AppProvider({ children }) {
   }, []);
 
   /**
-   * Reset all progress (useful for testing / settings page).
+   * Reset all progress.
    */
   const resetProgress = useCallback(() => {
     setState({ ...DEFAULT_STATE });
@@ -330,6 +371,15 @@ export function AppProvider({ children }) {
       resetProgress,
     ]
   );
+
+  if (syncing) {
+    return (
+      <div className="loading-screen">
+        <div className="spinner" style={{ width: 48, height: 48 }} />
+        <h2>Syncing progress...</h2>
+      </div>
+    );
+  }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

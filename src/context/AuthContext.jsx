@@ -1,4 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  updateProfile
+} from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db, isFirebaseEnabled } from '../config/firebase';
 
 const AuthContext = createContext(null);
 
@@ -105,11 +114,42 @@ export function AuthProvider({ children }) {
 
   // Restore session on mount
   useEffect(() => {
-    const session = getStoredSession();
-    if (session) {
-      setUser(session);
+    if (isFirebaseEnabled) {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+            if (userDoc.exists()) {
+              setUser({ id: firebaseUser.uid, ...userDoc.data() });
+            } else {
+              setUser({
+                id: firebaseUser.uid,
+                name: firebaseUser.displayName || 'Student',
+                email: firebaseUser.email,
+                role: determineRole(firebaseUser.email),
+              });
+            }
+          } catch (e) {
+            setUser({
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || 'Student',
+              email: firebaseUser.email,
+              role: determineRole(firebaseUser.email),
+            });
+          }
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      });
+      return unsubscribe;
+    } else {
+      const session = getStoredSession();
+      if (session) {
+        setUser(session);
+      }
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   /**
@@ -122,26 +162,45 @@ export function AuthProvider({ children }) {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const users = getStoredUsers();
 
-    const found = users.find(
-      (u) => u.email === normalizedEmail && u.password === password
-    );
+    if (isFirebaseEnabled) {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+        const firebaseUser = userCredential.user;
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        const userData = userDoc.exists() ? userDoc.data() : {
+          name: firebaseUser.displayName || 'Student',
+          email: firebaseUser.email,
+          role: determineRole(firebaseUser.email),
+        };
+        const sessionUser = { id: firebaseUser.uid, ...userData };
+        setUser(sessionUser);
+        return sessionUser;
+      } catch (err) {
+        throw new Error(err.message || 'Invalid email or password.');
+      }
+    } else {
+      const users = getStoredUsers();
 
-    if (!found) {
-      throw new Error('Invalid email or password.');
+      const found = users.find(
+        (u) => u.email === normalizedEmail && u.password === password
+      );
+
+      if (!found) {
+        throw new Error('Invalid email or password.');
+      }
+
+      const sessionUser = {
+        id: found.id,
+        name: found.name,
+        email: found.email,
+        role: found.role,
+      };
+
+      setUser(sessionUser);
+      saveSession(sessionUser);
+      return sessionUser;
     }
-
-    const sessionUser = {
-      id: found.id,
-      name: found.name,
-      email: found.email,
-      role: found.role,
-    };
-
-    setUser(sessionUser);
-    saveSession(sessionUser);
-    return sessionUser;
   }, []);
 
   /**
@@ -161,45 +220,78 @@ export function AuthProvider({ children }) {
 
     const normalizedEmail = email.trim().toLowerCase();
     const trimmedName = name.trim();
-    const users = getStoredUsers();
 
-    // Check for duplicate email
-    if (users.some((u) => u.email === normalizedEmail)) {
-      throw new Error('An account with this email already exists.');
+    if (isFirebaseEnabled) {
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+        const firebaseUser = userCredential.user;
+        await updateProfile(firebaseUser, { displayName: trimmedName });
+        
+        const role = determineRole(normalizedEmail);
+        const userData = {
+          name: trimmedName,
+          email: normalizedEmail,
+          role,
+          createdAt: new Date().toISOString(),
+        };
+        
+        await setDoc(doc(db, 'users', firebaseUser.uid), userData);
+        const sessionUser = { id: firebaseUser.uid, ...userData };
+        setUser(sessionUser);
+        return sessionUser;
+      } catch (err) {
+        throw new Error(err.message || 'Failed to register user.');
+      }
+    } else {
+      const users = getStoredUsers();
+
+      // Check for duplicate email
+      if (users.some((u) => u.email === normalizedEmail)) {
+        throw new Error('An account with this email already exists.');
+      }
+
+      const role = determineRole(normalizedEmail);
+      const newUser = {
+        id: generateId(),
+        name: trimmedName,
+        email: normalizedEmail,
+        password, // Stored as plain text for localStorage demo
+        role,
+        createdAt: new Date().toISOString(),
+      };
+
+      users.push(newUser);
+      saveUsers(users);
+
+      // Auto-login after registration
+      const sessionUser = {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+      };
+
+      setUser(sessionUser);
+      saveSession(sessionUser);
+      return sessionUser;
     }
-
-    const role = determineRole(normalizedEmail);
-    const newUser = {
-      id: generateId(),
-      name: trimmedName,
-      email: normalizedEmail,
-      password, // Stored as plain text for localStorage demo; Firebase will hash it
-      role,
-      createdAt: new Date().toISOString(),
-    };
-
-    users.push(newUser);
-    saveUsers(users);
-
-    // Auto-login after registration
-    const sessionUser = {
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-    };
-
-    setUser(sessionUser);
-    saveSession(sessionUser);
-    return sessionUser;
   }, []);
 
   /**
    * Log the current user out.
    */
-  const logout = useCallback(() => {
-    setUser(null);
-    saveSession(null);
+  const logout = useCallback(async () => {
+    if (isFirebaseEnabled) {
+      try {
+        await signOut(auth);
+        setUser(null);
+      } catch (err) {
+        console.error("Failed to log out of Firebase:", err);
+      }
+    } else {
+      setUser(null);
+      saveSession(null);
+    }
   }, []);
 
   const value = {

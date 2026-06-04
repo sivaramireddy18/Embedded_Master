@@ -4,6 +4,8 @@ import {
   Users, TrendingUp, Award, Clock, Search, ChevronRight,
   BarChart3, Flame, Star, BookOpen, Eye, Database
 } from 'lucide-react';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { db, isFirebaseEnabled } from '../../config/firebase';
 
 const STORAGE_KEY = 'embedmaster-users';
 
@@ -11,6 +13,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const generateMockData = () => {
     if (!window.confirm("This will overwrite existing local storage users and progress with 50 fake users. Continue?")) return;
@@ -39,16 +42,61 @@ export default function AdminDashboard() {
     const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(u => u.role === 'admin');
     const finalUsers = [...existing, ...fakeUsers];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(finalUsers));
-    setUsers(finalUsers);
+    setUsers(finalUsers.map(u => ({ ...u, progress: getProgress(u.id) })));
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setUsers(JSON.parse(stored));
-      } catch (e) { /* empty */ }
-    }
+    const fetchUsers = async () => {
+      setLoading(true);
+      if (isFirebaseEnabled) {
+        try {
+          const querySnapshot = await getDocs(collection(db, 'users'));
+          const usersList = [];
+          
+          for (const userDoc of querySnapshot.docs) {
+            const userData = userDoc.data();
+            const uid = userDoc.id;
+            
+            // Fetch progress for this user
+            let progressData = null;
+            try {
+              const progDoc = await getDoc(doc(db, 'users', uid, 'progress', 'data'));
+              if (progDoc.exists()) progressData = progDoc.data();
+            } catch (e) {
+              console.error(`Error loading progress for user ${uid}:`, e);
+            }
+            
+            usersList.push({
+              id: uid,
+              name: userData.name || 'Student',
+              email: userData.email || '',
+              role: userData.role || 'student',
+              progress: progressData
+            });
+          }
+          setUsers(usersList);
+        } catch (error) {
+          console.error("Error fetching global users from Firestore:", error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          try {
+            const parsedUsers = JSON.parse(stored);
+            const usersList = parsedUsers.map(u => ({
+              ...u,
+              progress: getProgress(u.id)
+            }));
+            setUsers(usersList);
+          } catch (e) { /* empty */ }
+        }
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   const filteredUsers = users.filter(u =>
@@ -67,6 +115,9 @@ export default function AdminDashboard() {
     : 0;
 
   function getProgress(userId) {
+    const foundUser = users.find(u => u.id === userId);
+    if (foundUser && foundUser.progress) return foundUser.progress;
+
     try {
       const stored = localStorage.getItem(`embedmaster-progress-${userId}`);
       return stored ? JSON.parse(stored) : null;
@@ -81,6 +132,15 @@ export default function AdminDashboard() {
       if (xp >= levelThresholds[i]) return { index: i, name: levelNames[i] };
     }
     return { index: 0, name: 'Novice' };
+  }
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="spinner" style={{ width: 48, height: 48 }} />
+        <h2>Syncing dashboard data...</h2>
+      </div>
+    );
   }
 
   // User detail view
@@ -184,10 +244,12 @@ export default function AdminDashboard() {
           </h1>
           <p>Monitor learner progress and platform analytics</p>
         </div>
-        <button className="btn btn-outline" onClick={generateMockData}>
-          <Database size={16} style={{ marginRight: 'var(--space-2)' }} />
-          Generate Mock Data
-        </button>
+        {!isFirebaseEnabled && (
+          <button className="btn btn-outline" onClick={generateMockData}>
+            <Database size={16} style={{ marginRight: 'var(--space-2)' }} />
+            Generate Mock Data
+          </button>
+        )}
       </div>
 
       {/* Overview Stats */}

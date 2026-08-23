@@ -36,7 +36,7 @@ The project complements real boards and laboratory equipment; it is not intended
 
 ## 🧩 Current Architecture
 
-The repository is a Vite-based React application. The source tree contains reusable components, configuration, application context, data and page-level modules. fileciteturn57file0
+The repository is a Vite-based React application. The source tree contains reusable components, configuration, application context, data and page-level modules.
 
 ```text
 Embedded_Master/
@@ -72,8 +72,6 @@ The current application uses:
 - CodeMirror with C/C++ language support
 - Lucide React
 - Firebase
-
-These dependencies are defined in the current project configuration. fileciteturn56file0
 
 ---
 

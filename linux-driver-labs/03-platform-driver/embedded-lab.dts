@@ -1,0 +1,14 @@
+/dts-v1/;
+
+/*
+ * Example node for the educational platform driver.
+ * This is intentionally hardware-agnostic: no real MMIO range is claimed.
+ * Integrate the node under the appropriate SoC bus on a real board.
+ */
+
+/ {
+    embedded_lab: embedded-lab {
+        compatible = "siva,embedded-lab";
+        status = "okay";
+    };
+};
